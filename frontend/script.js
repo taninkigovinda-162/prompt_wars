@@ -191,9 +191,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const handleAiError = (status) => {
         let msg = "Something went wrong. Please try again.";
-        if (status === 503) msg = "AI service is starting up. Try again in 30 seconds.";
+        if (status === 503) msg = "AI service is temporarily unavailable. Please try again shortly.";
         if (status === 429) msg = "Too many requests. Please wait a moment.";
-        if (status === 400) msg = "Your question was flagged. Please rephrase it.";
+        if (status === 400) msg = "Your question was flagged by safety filters. Please rephrase it.";
+        if (status === 500) msg = "An internal error occurred. Please try again.";
         appendMessage(msg, 'ai');
     };
 

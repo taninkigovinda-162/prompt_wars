@@ -73,10 +73,13 @@ def create_app() -> FastAPI:
     @app.get("/health", tags=["System"])
     async def health_check():
         """Return service health status and AI readiness."""
+        gemini_ready = ai_service.model is not None
         return {
             "status": "healthy",
             "version": settings.VERSION,
-            "ai_service_ready": ai_service.model is not None
+            "ai_service_ready": gemini_ready,
+            "ai_mode": "gemini-2.5-flash" if gemini_ready else "fallback",
+            "gemini_api_key_set": bool(ai_service._get_api_key()),
         }
 
     # Mount static files (Frontend) — must be last to avoid shadowing API routes

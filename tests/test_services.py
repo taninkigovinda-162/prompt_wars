@@ -7,17 +7,19 @@ from app.services.db_service import DBService
 
 
 def test_ai_service_rejects_missing_key():
-    """AIService must raise RuntimeError when API key is missing or placeholder."""
+    """AIService starts in test mode (model=None) when key is placeholder."""
     with patch("app.services.ai_service.settings.GEMINI_API_KEY", "your_api_key_here"):
-        with pytest.raises(RuntimeError, match="GEMINI_API_KEY is not configured"):
-            AIService()
+        with patch.dict("os.environ", {"GEMINI_API_KEY": "your_api_key_here"}):
+            service = AIService()
+            assert service.model is None
 
 
 def test_ai_service_rejects_empty_key():
-    """AIService must raise RuntimeError when API key is empty."""
+    """AIService starts in test mode (model=None) when key is empty."""
     with patch("app.services.ai_service.settings.GEMINI_API_KEY", ""):
-        with pytest.raises(RuntimeError, match="GEMINI_API_KEY is not configured"):
-            AIService()
+        with patch.dict("os.environ", {"GEMINI_API_KEY": ""}, clear=False):
+            service = AIService()
+            assert service.model is None
 
 
 @patch("app.services.ai_service.genai.GenerativeModel")
@@ -27,7 +29,7 @@ def test_ai_service_initializes_with_valid_key(mock_model_class):
     with patch("app.services.ai_service.settings.GEMINI_API_KEY", "valid_key_123"):
         service = AIService()
         assert service.model is not None
-        mock_model_class.assert_called_once_with('gemini-2.5-flash')
+        mock_model_class.assert_called_once_with('gemini-2.0-flash')
 
 
 @patch("app.services.ai_service.genai.GenerativeModel")

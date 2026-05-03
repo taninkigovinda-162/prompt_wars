@@ -3,7 +3,7 @@ AI Service Module — CivicGuide Smart Election Assistant.
 
 Provides the core AI chat functionality using Google's Gemini 2.5 Flash model.
 Features TTL-based caching to reduce latency and API costs for repeated queries.
-Includes production-grade fallback responses when the AI model is unavailable.
+Raises HTTP 503 when AI model is unavailable.
 """
 import logging
 import asyncio
@@ -40,59 +40,6 @@ Your goal is to guide Indian citizens through the election process following ECI
 - End with a brief follow-up question to keep the user engaged.
 """
 
-# --- Production Fallback Responses (ECI-compliant) ---
-FALLBACK_RESPONSES = {
-    "register": (
-        "• Visit the National Voters' Service Portal (NVSP) at voters.eci.gov.in\n"
-        "• Fill out Form 6 for new voter registration\n"
-        "• You need: proof of age, proof of address, and a passport-size photo\n"
-        "• You can also register at your nearest Electoral Registration Office\n"
-        "• Would you like to know what documents are accepted?"
-    ),
-    "vote": (
-        "• Reach your assigned polling station on Election Day\n"
-        "• Carry a valid photo ID (Voter ID/EPIC, Aadhaar, Passport, etc.)\n"
-        "• Your name must appear in the electoral roll to vote\n"
-        "• After identity verification, you will cast your vote on the EVM\n"
-        "• Would you like to know about the complete voting process step-by-step?"
-    ),
-    "document": (
-        "• Voter ID Card (EPIC) — issued by the Election Commission\n"
-        "• Aadhaar Card, Passport, or Driving License\n"
-        "• PAN Card, Bank Passbook with Photo, or Government ID\n"
-        "• Any photo ID approved by the Election Commission of India\n"
-        "• Would you like to know how to apply for a Voter ID?"
-    ),
-    "evm": (
-        "• EVM (Electronic Voting Machine) has a Control Unit and a Ballot Unit\n"
-        "• Press the blue button next to your candidate's name and symbol\n"
-        "• A beep and a light confirm your vote was recorded\n"
-        "• VVPAT slip shows your vote for 7 seconds as verification\n"
-        "• Do you want to learn about the VVPAT verification process?"
-    ),
-    "default": (
-        "• I'm CivicGuide, your Smart Election Assistant\n"
-        "• I can help with: voter registration, voting process, required documents, and ECI guidelines\n"
-        "• Ask me anything about the Indian election process\n"
-        "• All my information follows official ECI (Election Commission of India) guidelines\n"
-        "• What would you like to know about the election process?"
-    ),
-}
-
-
-def _get_fallback_response(question: str) -> str:
-    """Return a relevant fallback response based on keyword matching."""
-    q = question.lower()
-    if any(w in q for w in ["register", "enrollment", "form 6", "enrol", "new voter"]):
-        return FALLBACK_RESPONSES["register"]
-    if any(w in q for w in ["vote", "voting", "poll", "ballot", "election day"]):
-        return FALLBACK_RESPONSES["vote"]
-    if any(w in q for w in ["document", "id", "proof", "aadhaar", "passport", "epic"]):
-        return FALLBACK_RESPONSES["document"]
-    if any(w in q for w in ["evm", "machine", "vvpat", "electronic"]):
-        return FALLBACK_RESPONSES["evm"]
-    return FALLBACK_RESPONSES["default"]
-
 
 class AIService:
     """Manages Gemini AI model initialization and response generation."""
@@ -116,27 +63,23 @@ class AIService:
         return api_key
 
     def _initialize_model(self) -> None:
-        """
-        Configure and initialize the Gemini generative model.
-
-        Does NOT raise — logs warnings and falls back gracefully.
-        """
         self._init_attempted = True
         api_key = self._get_api_key()
         if not api_key:
             logger.warning(
                 "⚠️ GEMINI_API_KEY is not configured. "
-                "AI will use fallback responses. "
-                "Set GEMINI_API_KEY in Cloud Run environment variables for live AI."
+                "AI will use 503 responses. "
+                "Set GEMINI_API_KEY in Cloud Run environment variables."
             )
             return
         try:
             genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel('gemini-2.5-flash')
-            logger.info("✅ Gemini model initialized successfully with gemini-2.5-flash.")
+            self.model = genai.GenerativeModel('gemini-2.0-flash')
+            logger.info("✅ Gemini model initialized successfully.")
         except Exception as e:
             logger.error(f"❌ Failed to initialize Gemini model: {e}")
             self.model = None
+
 
     def _try_lazy_init(self) -> None:
         """Attempt re-initialization if the model isn't ready (env var may have appeared)."""
@@ -171,10 +114,10 @@ class AIService:
 
         # If model is still not available, return fallback (NOT a 503!)
         if not self.model:
-            logger.info(f"Using fallback response for: {user_question[:60]}")
-            fallback = _get_fallback_response(user_question)
-            ai_cache[user_question] = fallback
-            return fallback
+            raise HTTPException(
+                status_code=503,
+                detail="AI service is not initialized. Check GEMINI_API_KEY configuration."
+            )
 
         try:
             full_prompt = f"{SYSTEM_PROMPT}\n\nUser Question: {user_question}\n\nAssistant Response:"
@@ -193,7 +136,10 @@ class AIService:
 
             answer_text = response.text.strip()
             if not answer_text:
-                raise ValueError("Empty response from Gemini API.")
+                raise HTTPException(
+                    status_code=500,
+                    detail="AI response failed. Please try again."
+                )
 
             ai_cache[user_question] = answer_text
             return answer_text
@@ -202,10 +148,10 @@ class AIService:
             raise
         except Exception as e:
             logger.error(f"Gemini API error: {e}")
-            # Return fallback instead of crashing with 500
-            fallback = _get_fallback_response(user_question)
-            ai_cache[user_question] = fallback
-            return fallback
+            raise HTTPException(
+                status_code=500,
+                detail="AI response failed. Please try again."
+            )
 
 
 # --- Module-level singleton (never crashes the app) ---

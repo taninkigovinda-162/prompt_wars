@@ -59,23 +59,46 @@ def test_google_cloud_logging_fallback(caplog):
 # ---------------------------------------------------------
 @patch("app.services.ai_service.genai.configure")
 def test_ai_service_init_exception(mock_configure, caplog):
-    """Test AI service initialization when genai configuration throws an exception."""
+    """Test AI service logs error and sets model=None when genai.configure throws."""
     mock_configure.side_effect = Exception("Mock config error")
     with patch("app.services.ai_service.settings.GEMINI_API_KEY", "valid_key"):
-        with pytest.raises(RuntimeError, match="Gemini initialization failed: Mock config error"):
-            AIService()
+        service = AIService()
+        assert service.model is None
         assert "Failed to initialize Gemini model: Mock config error" in caplog.text
 
 
+@patch("app.services.ai_service.genai.GenerativeModel")
+@patch("app.services.ai_service.genai.configure")
+def test_ai_service_lazy_init(mock_configure, mock_model_class):
+    """Test _try_lazy_init successfully initializes model if key becomes available."""
+    with patch("app.services.ai_service.settings.GEMINI_API_KEY", ""):
+        with patch.dict("os.environ", {"GEMINI_API_KEY": ""}, clear=False):
+            service = AIService()
+            assert service.model is None
+
+    # Now make the key available and try lazy init
+    with patch("app.services.ai_service.settings.GEMINI_API_KEY", "new_valid_key"):
+        service._try_lazy_init()
+        assert service.model is not None
+        mock_configure.assert_called_once_with(api_key="new_valid_key")
+
+
 @pytest.mark.asyncio
-async def test_ai_service_uninitialized_model():
+@patch("app.services.ai_service.genai.GenerativeModel")
+async def test_ai_service_uninitialized_model(mock_model_class):
     """Test AI service response generation when model is uninitialized."""
-    service = AIService.__new__(AIService)
-    service.model = None
-    with pytest.raises(HTTPException) as exc_info:
-        await service.generate_response("Question")
-    assert exc_info.value.status_code == 503
-    assert "AI service is not initialized" in exc_info.value.detail
+    from app.services.ai_service import ai_cache
+    ai_cache.clear()
+    
+    with patch("app.services.ai_service.settings.GEMINI_API_KEY", ""):
+        with patch.dict("os.environ", {"GEMINI_API_KEY": ""}, clear=False):
+            service = AIService()
+            # Force model to None to simulate uninitialized state
+            service.model = None
+            with pytest.raises(HTTPException) as exc_info:
+                await service.generate_response("Question")
+            assert exc_info.value.status_code == 503
+            assert "AI service is not initialized" in exc_info.value.detail
 
 
 @pytest.mark.asyncio

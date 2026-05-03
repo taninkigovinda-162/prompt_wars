@@ -1,7 +1,7 @@
-<<<<<<< HEAD
+
 # 🏛️ CivicGuide — Smart Election Assistant
 
-[![CI Pipeline](https://github.com/GovindaSaiKiran/prompt_wars_project_two/actions/workflows/ci.yml/badge.svg)](https://github.com/GovindaSaiKiran/prompt_wars_project_two/actions)
+[![CI Pipeline](https://github.com/GovindaSaiKiran/new_war/actions/workflows/ci.yml/badge.svg)](https://github.com/GovindaSaiKiran/new_war/actions)
 [![Python 3.11](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/)
 [![Deployed on Cloud Run](https://img.shields.io/badge/Cloud%20Run-Deployed-4285F4?logo=google-cloud)](https://smart-election-assistant-488041159564.us-central1.run.app/)
 [![Powered by Gemini](https://img.shields.io/badge/Gemini%202.5%20Flash-Powered-FF6F00?logo=google)](https://ai.google.dev/)
@@ -131,8 +131,8 @@ The electoral process is complex and overwhelming for first-time voters. Officia
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/GovindaSaiKiran/prompt_wars_project_two.git
-cd prompt_wars_project_two
+git clone https://github.com/GovindaSaiKiran/new_war.git
+cd new_war
 
 # 2. Set up virtual environment
 python -m venv venv
@@ -176,7 +176,7 @@ pytest tests/ -v --tb=short
 ## 📁 Project Structure
 
 ```
-prompt_wars_project_two/
+new_war/
 ├── .github/workflows/ci.yml    # CI/CD pipeline
 ├── backend/
 │   ├── app/
@@ -239,6 +239,3 @@ Built for hackathon evaluation — showcasing production-grade Google Cloud & AI
 <p align="center">
   <b>🇮🇳 Empowering Democracy Through Technology 🇮🇳</b>
 </p>
-=======
-# new_war
->>>>>>> 21b6aece43e9ccbcbc49fc921475eea8003e4f86

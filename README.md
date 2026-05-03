@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🏛️ CivicGuide — Smart Election Assistant
 
 [![CI Pipeline](https://github.com/GovindaSaiKiran/prompt_wars_project_two/actions/workflows/ci.yml/badge.svg)](https://github.com/GovindaSaiKiran/prompt_wars_project_two/actions)
@@ -238,3 +239,6 @@ Built for hackathon evaluation — showcasing production-grade Google Cloud & AI
 <p align="center">
   <b>🇮🇳 Empowering Democracy Through Technology 🇮🇳</b>
 </p>
+=======
+# new_war
+>>>>>>> 21b6aece43e9ccbcbc49fc921475eea8003e4f86
